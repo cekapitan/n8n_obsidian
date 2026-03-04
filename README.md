@@ -2,6 +2,39 @@
 
 Build a local n8n workflow that collects links from X and saves them into an Obsidian vault as Markdown notes.
 
+## Quick Start (Local)
+
+1. Verify n8n:
+   ```bash
+   n8n --version
+   ```
+2. Copy env file:
+   ```bash
+   cp .env.example .env
+   ```
+3. Edit `.env` and set:
+   - `N8N_ENCRYPTION_KEY`
+   - `OBSIDIAN_VAULT_PATH`
+4. Start n8n:
+   ```bash
+   ./scripts/start-n8n-local.sh
+   ```
+5. Open `http://localhost:5678`.
+
+## Import Ready Workflow
+
+1. In n8n, click `Import from file`.
+2. Select:
+   - `workflows/x-to-obsidian.json`
+3. In `.env`, set:
+   - `OBSIDIAN_VAULT_PATH`
+   - `X_BEARER_TOKEN`
+   - `X_USER_ID`
+4. Restart n8n after editing `.env`.
+5. Open the imported workflow and click `Execute workflow`.
+6. Confirm notes are written to:
+   - `$OBSIDIAN_VAULT_PATH/Inbox`
+
 ## Goal
 
 Create a local automation:
@@ -12,7 +45,7 @@ Create a local automation:
 ## Prerequisites
 
 1. Install Node.js 20+.
-2. Install n8n locally:
+2. Install n8n locally (already done on this machine):
    ```bash
    npm install -g n8n
    ```

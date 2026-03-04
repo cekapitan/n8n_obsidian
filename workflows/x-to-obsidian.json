@@ -1,0 +1,222 @@
+{
+  "name": "X Links -> Obsidian",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "c2f2711a-7b4f-4f99-bb79-66f0d45cb95f",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -840,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.x.com/2/users/{{$env.X_USER_ID}}/tweets",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "max_results",
+              "value": "10"
+            },
+            {
+              "name": "tweet.fields",
+              "value": "created_at,entities"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.X_BEARER_TOKEN}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "56bdacc9-795b-4c9f-a6be-3a65617ec021",
+      "name": "Fetch X Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -620,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const out = [];\nconst tweets = items[0]?.json?.data ?? [];\n\nfor (const tweet of tweets) {\n  const urls = tweet.entities?.urls ?? [];\n  for (const u of urls) {\n    out.push({\n      json: {\n        tweet_id: tweet.id,\n        created_at: tweet.created_at,\n        x_url: `https://x.com/i/web/status/${tweet.id}`,\n        link: u.expanded_url || u.url,\n      },\n    });\n  }\n}\n\nreturn out;"
+      },
+      "id": "a698be67-73da-4e8f-b48c-af0fbed6bb54",
+      "name": "Extract Links",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { link, x_url, created_at, tweet_id } = $json;\nconst safeId = String(tweet_id || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '-');\nconst fileName = `${new Date().toISOString().slice(0, 10)}-x-${safeId}.md`;\n\nreturn {\n  json: {\n    ...$json,\n    fileName,\n    content: `# X Link\\n\\n- URL: ${link}\\n- Source: ${x_url}\\n- Posted: ${created_at}\\n`,\n  },\n};"
+      },
+      "id": "c2be34a9-3c18-49ad-bf53-2e2f5f7802bc",
+      "name": "Build Markdown",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -150,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "de5e33ee-0cc8-4471-9312-36035760511c",
+              "name": "filePath",
+              "value": "={{$env.OBSIDIAN_VAULT_PATH + '/Inbox/' + $json.fileName}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "66f5dc04-84fb-4f2a-b34b-c57b2a3c33f5",
+      "name": "Set File Path",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "jsonToBinary",
+        "sourceKey": "content",
+        "destinationKey": "data",
+        "options": {}
+      },
+      "id": "e2524d04-1703-46df-bf53-02171f9dd5e8",
+      "name": "Content To Binary",
+      "type": "n8n-nodes-base.moveBinaryData",
+      "typeVersion": 1,
+      "position": [
+        320,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "fileName": "={{$json.filePath}}",
+        "dataPropertyName": "data"
+      },
+      "id": "fa9d2fb8-a66b-4d43-8670-4ea7e2d7fdad",
+      "name": "Write To Obsidian",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        560,
+        120
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch X Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch X Posts": {
+      "main": [
+        [
+          {
+            "node": "Extract Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Links": {
+      "main": [
+        [
+          {
+            "node": "Build Markdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Markdown": {
+      "main": [
+        [
+          {
+            "node": "Set File Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set File Path": {
+      "main": [
+        [
+          {
+            "node": "Content To Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Content To Binary": {
+      "main": [
+        [
+          {
+            "node": "Write To Obsidian",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4a7f6909-7e4b-4fca-8a57-ac7db6f52f17",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "xToObsidianTemplate",
+  "tags": []
+}
